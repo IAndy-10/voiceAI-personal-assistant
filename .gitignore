@@ -1,0 +1,15 @@
+# Secrets
+.env
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+
+# Node (future client/)
+node_modules/
+dist/
+
+# macOS
+.DS_Store
