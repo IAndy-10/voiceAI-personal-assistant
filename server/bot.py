@@ -131,7 +131,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     stt = WhisperSTTServiceMLX(
         settings=WhisperSTTServiceMLX.Settings(
             model=config.WHISPER_MODEL,
-            language=Language.ES,
+            language=Language(config.STT_LANGUAGE),
         ),
     )
 

@@ -47,11 +47,14 @@ LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "400"))
 # for better accuracy when the LLM runs in the cloud.
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo-q4")
 
-# Spanish Piper voices: es_MX-claude-high, es_MX-ald-medium, es_AR-daniela-high, es_ES-*.
-PIPER_VOICE = os.getenv("PIPER_VOICE", "es_MX-claude-high")
-
-# --- Agent -----------------------------------------------------------------
-SYSTEM_PROMPT = """\
+# --- Language ----------------------------------------------------------------
+# BOT_LANGUAGE selects the Whisper language, the default Piper voice, and the prompts.
+LANGUAGES = {
+    "es": {
+        "stt_language": "es",
+        # Other Spanish voices: es_MX-ald-medium, es_AR-daniela-high, es_ES-*.
+        "piper_voice": "es_MX-claude-high",
+        "system_prompt": """\
 Eres Voice Lab, un asistente de voz amable. Hablas español chileno natural y cercano, \
 tratando al usuario de "tú". Puedes usar alguna expresión chilena de vez en cuando, \
 sin exagerar.
@@ -64,9 +67,41 @@ Todo lo que escribes se convierte en voz, así que:
 Si la transcripción del usuario está vacía o no tiene sentido, pídele amablemente que \
 lo repita. No tienes herramientas ni acceso a internet: nunca digas que realizaste una \
 acción externa. Si no sabes algo con certeza, dilo en vez de inventarlo.\
-"""
+""",
+        "greeting": "Saluda y preséntate en una sola oración breve.",
+    },
+    "en": {
+        "stt_language": "en",
+        # Other English voices: en_US-ryan-high, en_US-amy-medium, en_GB-alan-medium.
+        "piper_voice": "en_US-lessac-medium",
+        "system_prompt": """\
+You are Voice Lab, a friendly voice assistant. Speak in natural, casual English.
 
-GREETING_INSTRUCTION = "Saluda y preséntate en una sola oración breve."
+Everything you write is spoken aloud, so:
+- Answer in one to three short sentences unless asked for more detail.
+- Never use markdown, lists, emoji, URLs, or special symbols.
+- Write numbers and abbreviations the way they are pronounced.
+
+If the user's transcript is empty or makes no sense, kindly ask them to repeat it. \
+You have no tools or internet access: never claim you performed an external action. \
+If you are not sure about something, say so instead of making it up.\
+""",
+        "greeting": "Say hello and introduce yourself in one short sentence.",
+    },
+}
+
+BOT_LANGUAGE = os.getenv("BOT_LANGUAGE", "es").strip().lower()
+if BOT_LANGUAGE not in LANGUAGES:
+    logger.error(f"BOT_LANGUAGE={BOT_LANGUAGE!r} is invalid. Use one of: {', '.join(LANGUAGES)}.")
+    sys.exit(1)
+_language = LANGUAGES[BOT_LANGUAGE]
+
+STT_LANGUAGE = _language["stt_language"]
+PIPER_VOICE = os.getenv("PIPER_VOICE") or _language["piper_voice"]
+
+# --- Agent -----------------------------------------------------------------
+SYSTEM_PROMPT = _language["system_prompt"]
+GREETING_INSTRUCTION = _language["greeting"]
 
 
 def resolve_llm_provider() -> str:
