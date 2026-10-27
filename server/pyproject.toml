@@ -1,0 +1,19 @@
+[project]
+name = "voice-lab-server"
+version = "0.1.0"
+description = "Voice Lab: minimal Pipecat voice agent (Whisper + Claude + Piper)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "pipecat-ai[webrtc,silero,anthropic,openai,google,ollama,whisper,mlx-whisper,piper,runner]==1.14.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.11,<1",
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["I"]
