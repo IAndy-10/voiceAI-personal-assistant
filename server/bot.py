@@ -8,6 +8,7 @@ OpenAI, or Gemini instead. Based on the official Pipecat quickstart. Run with::
 Then open http://localhost:7860/client to talk to the bot.
 """
 
+import asyncio
 import json
 import os
 import sys
@@ -55,8 +56,7 @@ logger.info("Loading Pipecat components (first run downloads the models)...")
 from pipecat.audio.vad.silero import SileroVADAnalyzer
 from pipecat.frames.frames import LLMRunFrame
 from pipecat.pipeline.pipeline import Pipeline
-from pipecat.pipeline.runner import PipelineRunner
-from pipecat.pipeline.task import PipelineParams, PipelineTask
+from pipecat.pipeline.worker import PipelineParams, PipelineWorker, ProcessorUnusablePolicy
 from pipecat.processors.aggregators.llm_context import LLMContext
 from pipecat.processors.aggregators.llm_response_universal import (
     LLMContextAggregatorPair,
@@ -69,6 +69,7 @@ from pipecat.services.piper.tts import PiperTTSService
 from pipecat.services.whisper.stt import WhisperSTTServiceMLX
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
+from pipecat.workers.runner import WorkerRunner
 
 
 def create_llm(provider: str, system_prompt: str) -> LLMService:
@@ -162,29 +163,43 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
         ]
     )
 
-    task = PipelineTask(
+    worker = PipelineWorker(
         pipeline,
         params=PipelineParams(
             enable_metrics=True,
             enable_usage_metrics=True,
         ),
+        # Ends the session when the user hasn't spoken for this long (0 disables it).
+        idle_timeout_secs=config.IDLE_TIMEOUT_SECS or None,
+        # A service that can't recover (e.g. a rejected API key) ends the session;
+        # the error has already been sent to the client.
+        processor_unusable_policy=ProcessorUnusablePolicy.END,
     )
+
+    async def end_after_max_duration():
+        await asyncio.sleep(config.MAX_SESSION_SECS)
+        logger.info(f"Session reached the {config.MAX_SESSION_SECS} s limit, ending it")
+        await worker.stop_when_done()
 
     @transport.event_handler("on_client_connected")
     async def on_client_connected(transport, client):
         logger.info("Client connected")
         # "user" role, since Ollama ignores "developer" messages.
         context.add_message({"role": "user", "content": language.greeting})
-        await task.queue_frames([LLMRunFrame()])
+        await worker.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
     async def on_client_disconnected(transport, client):
         logger.info("Client disconnected")
-        await task.cancel()
+        await worker.cancel()
 
-    runner = PipelineRunner(handle_sigint=runner_args.handle_sigint)
+    runner = WorkerRunner(handle_sigint=runner_args.handle_sigint)
 
-    await runner.run(task)
+    max_duration = asyncio.create_task(end_after_max_duration())
+    try:
+        await runner.run(worker)
+    finally:
+        max_duration.cancel()
 
 
 async def bot(runner_args: RunnerArguments):

@@ -25,6 +25,11 @@ export default function App() {
           {session.micError}
         </p>
       )}
+      {session.notice && (
+        <p className="rounded-lg bg-zinc-100 px-3 py-2 text-sm text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+          {session.notice}
+        </p>
+      )}
       {session.error && (
         <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-900 dark:bg-red-950 dark:text-red-200">
           {session.error}

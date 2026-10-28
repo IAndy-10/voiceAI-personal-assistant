@@ -42,6 +42,11 @@ GOOGLE_MODEL = os.getenv("GOOGLE_MODEL") or None
 
 LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "400"))
 
+# --- Session limits ----------------------------------------------------------
+# End a session after this long without the user speaking, and after this long in total.
+IDLE_TIMEOUT_SECS = float(os.getenv("IDLE_TIMEOUT_SECS", "300"))
+MAX_SESSION_SECS = float(os.getenv("MAX_SESSION_SECS", "1800"))
+
 # --- STT / TTS -------------------------------------------------------------
 # Multilingual Whisper model; the ".en" models are English-only. The q4 (quantized)
 # variant leaves memory for a local LLM on 8 GB machines; use whisper-large-v3-turbo

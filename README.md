@@ -74,6 +74,8 @@ All settings live in `server/.env` (see `.env.example`):
 | `OLLAMA_MODEL` | `qwen3:4b-instruct` | Local model; `gemma3:1b` is ~2–3× faster and good in English, weaker on Spanish facts |
 | `WHISPER_MODEL` | `whisper-large-v3-turbo-q4` | Use `whisper-large-v3-turbo` for better accuracy when the LLM runs in the cloud |
 | `PIPER_VOICE` | per language | Defaults: `es_MX-claude-high` / `en_US-lessac-medium`; any Piper voice works |
+| `IDLE_TIMEOUT_SECS` | `300` | End the session after this long without the user speaking; `0` disables it |
+| `MAX_SESSION_SECS` | `1800` | End the session after this long in total (**untested**) |
 
 ## Known limitations
 
@@ -82,6 +84,7 @@ All settings live in `server/.env` (see `.env.example`):
 - **Model identity:** local models don't know their own name and may invent one (e.g. Gemma claiming to be PaLM 2).
 - **Local LLM quality:** small models make up facts.
 - **License:** the `piper-tts` dependency is GPL-3.0, which matters if you distribute the app.
+- **Session limits:** the idle timeout is tested; the `MAX_SESSION_SECS` timer is implemented but untested.
 - Tested on desktop Chrome only.
 
 ## Troubleshooting

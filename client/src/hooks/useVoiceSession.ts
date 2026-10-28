@@ -59,6 +59,9 @@ export function useVoiceSession() {
   const [speaker, setSpeaker] = useState<Speaker>(null);
   const [error, setError] = useState<string | null>(null);
   const [micError, setMicError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  // Tells a user-initiated End apart from the bot ending the session.
+  const endedByUser = useRef(false);
   // Each spoken sentence can produce several bot-output events; show it once.
   const shownSegments = useRef(new Set<number>());
   const session = useRef(0);
@@ -143,6 +146,15 @@ export function useVoiceSession() {
   );
 
   useRTVIClientEvent(
+    RTVIEvent.BotDisconnected,
+    useCallback(() => {
+      if (!endedByUser.current) {
+        setNotice("The assistant ended the session (no speech for a while, time limit, or a server error).");
+      }
+    }, []),
+  );
+
+  useRTVIClientEvent(
     RTVIEvent.Disconnected,
     useCallback(() => {
       setSpeaker(null);
@@ -161,8 +173,10 @@ export function useVoiceSession() {
     async (language: Language) => {
       if (!client) return;
       session.current += 1;
+      endedByUser.current = false;
       setError(null);
       setMicError(null);
+      setNotice(null);
       try {
         await client.startBotAndConnect({
           endpoint: START_ENDPOINT,
@@ -178,6 +192,7 @@ export function useVoiceSession() {
   );
 
   const end = useCallback(async () => {
+    endedByUser.current = true;
     await client?.disconnect();
   }, [client]);
 
@@ -189,6 +204,7 @@ export function useVoiceSession() {
     messages,
     error,
     micError,
+    notice,
     start,
     end,
     clearTranscript,
