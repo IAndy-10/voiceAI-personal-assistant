@@ -7,6 +7,7 @@ or the environment variables it reads.
 
 import os
 import sys
+from dataclasses import dataclass
 
 from dotenv import load_dotenv
 from loguru import logger
@@ -48,7 +49,7 @@ LLM_MAX_TOKENS = int(os.getenv("LLM_MAX_TOKENS", "400"))
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo-q4")
 
 # --- Language ----------------------------------------------------------------
-# BOT_LANGUAGE selects the Whisper language, the default Piper voice, and the prompts.
+# Each language selects the Whisper language, the default Piper voice, and the prompts.
 LANGUAGES = {
     "es": {
         "stt_language": "es",
@@ -90,18 +91,41 @@ If you are not sure about something, say so instead of making it up.\
     },
 }
 
+# The client picks the language per session; BOT_LANGUAGE is the default when it sends none.
 BOT_LANGUAGE = os.getenv("BOT_LANGUAGE", "es").strip().lower()
 if BOT_LANGUAGE not in LANGUAGES:
     logger.error(f"BOT_LANGUAGE={BOT_LANGUAGE!r} is invalid. Use one of: {', '.join(LANGUAGES)}.")
     sys.exit(1)
-_language = LANGUAGES[BOT_LANGUAGE]
 
-STT_LANGUAGE = _language["stt_language"]
-PIPER_VOICE = os.getenv("PIPER_VOICE") or _language["piper_voice"]
+# Overrides the voice for every language when set.
+PIPER_VOICE = os.getenv("PIPER_VOICE") or None
 
-# --- Agent -----------------------------------------------------------------
-SYSTEM_PROMPT = _language["system_prompt"]
-GREETING_INSTRUCTION = _language["greeting"]
+
+@dataclass(frozen=True)
+class LanguageSettings:
+    """Everything in the pipeline that depends on the conversation language."""
+
+    code: str
+    stt_language: str
+    piper_voice: str
+    system_prompt: str
+    greeting: str
+
+
+def language_settings(requested: str | None = None) -> LanguageSettings:
+    """Settings for the requested language, falling back to BOT_LANGUAGE."""
+    code = (requested or BOT_LANGUAGE).strip().lower()
+    if code not in LANGUAGES:
+        logger.warning(f"Unknown language {requested!r}; using {BOT_LANGUAGE}")
+        code = BOT_LANGUAGE
+    language = LANGUAGES[code]
+    return LanguageSettings(
+        code=code,
+        stt_language=language["stt_language"],
+        piper_voice=PIPER_VOICE or language["piper_voice"],
+        system_prompt=language["system_prompt"],
+        greeting=language["greeting"],
+    )
 
 
 def resolve_llm_provider() -> str:

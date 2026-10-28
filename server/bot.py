@@ -71,7 +71,7 @@ from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
 
 
-def create_llm(provider: str) -> LLMService:
+def create_llm(provider: str, system_prompt: str) -> LLMService:
     """Build the LLM service for the given provider. Provider SDKs are imported lazily."""
     if provider == "anthropic":
         from pipecat.services.anthropic.llm import AnthropicLLMService
@@ -83,7 +83,7 @@ def create_llm(provider: str) -> LLMService:
                 model=config.ANTHROPIC_MODEL,
                 effort=config.ANTHROPIC_EFFORT,
                 max_tokens=config.LLM_MAX_TOKENS,
-                system_instruction=config.SYSTEM_PROMPT,
+                system_instruction=system_prompt,
             ),
         )
 
@@ -95,7 +95,7 @@ def create_llm(provider: str) -> LLMService:
             settings=OpenAILLMService.Settings(
                 **({"model": config.OPENAI_MODEL} if config.OPENAI_MODEL else {}),
                 max_completion_tokens=config.LLM_MAX_TOKENS,
-                system_instruction=config.SYSTEM_PROMPT,
+                system_instruction=system_prompt,
             ),
         )
     elif provider == "google":
@@ -106,7 +106,7 @@ def create_llm(provider: str) -> LLMService:
             settings=GoogleLLMService.Settings(
                 **({"model": config.GOOGLE_MODEL} if config.GOOGLE_MODEL else {}),
                 max_tokens=config.LLM_MAX_TOKENS,
-                system_instruction=config.SYSTEM_PROMPT,
+                system_instruction=system_prompt,
             ),
         )
     else:
@@ -117,7 +117,7 @@ def create_llm(provider: str) -> LLMService:
             settings=OLLamaLLMService.Settings(
                 model=config.OLLAMA_MODEL,
                 max_tokens=config.LLM_MAX_TOKENS,
-                system_instruction=config.SYSTEM_PROMPT,
+                system_instruction=system_prompt,
             ),
         )
 
@@ -126,19 +126,22 @@ def create_llm(provider: str) -> LLMService:
 
 
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
-    logger.info("Starting bot")
+    # The React client sends {"language": "es" | "en"} in the /start body; /client sends none.
+    body = runner_args.body if isinstance(runner_args.body, dict) else {}
+    language = config.language_settings(body.get("language"))
+    logger.info(f"Starting bot (language: {language.code}, voice: {language.piper_voice})")
 
     stt = WhisperSTTServiceMLX(
         settings=WhisperSTTServiceMLX.Settings(
             model=config.WHISPER_MODEL,
-            language=Language(config.STT_LANGUAGE),
+            language=Language(language.stt_language),
         ),
     )
 
-    llm = create_llm(LLM_PROVIDER)
+    llm = create_llm(LLM_PROVIDER, language.system_prompt)
 
     tts = PiperTTSService(
-        settings=PiperTTSService.Settings(voice=config.PIPER_VOICE),
+        settings=PiperTTSService.Settings(voice=language.piper_voice),
     )
 
     context = LLMContext()
@@ -171,7 +174,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     async def on_client_connected(transport, client):
         logger.info("Client connected")
         # "user" role, since Ollama ignores "developer" messages.
-        context.add_message({"role": "user", "content": config.GREETING_INSTRUCTION})
+        context.add_message({"role": "user", "content": language.greeting})
         await task.queue_frames([LLMRunFrame()])
 
     @transport.event_handler("on_client_disconnected")
