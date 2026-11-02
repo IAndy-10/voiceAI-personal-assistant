@@ -49,6 +49,7 @@ def warm_up_ollama() -> None:
 
 
 LLM_PROVIDER = config.resolve_llm_provider()
+TTS_PROVIDER = config.resolve_tts_provider()
 if LLM_PROVIDER == "ollama":
     warm_up_ollama()
 
@@ -65,7 +66,7 @@ from pipecat.processors.aggregators.llm_response_universal import (
 from pipecat.runner.types import RunnerArguments
 from pipecat.runner.utils import create_transport
 from pipecat.services.llm_service import LLMService
-from pipecat.services.piper.tts import PiperTTSService
+from pipecat.services.tts_service import TTSService
 from pipecat.services.whisper.stt import WhisperSTTServiceMLX
 from pipecat.transcriptions.language import Language
 from pipecat.transports.base_transport import BaseTransport, TransportParams
@@ -126,11 +127,34 @@ def create_llm(provider: str, system_prompt: str) -> LLMService:
     return llm
 
 
+def create_tts(provider: str, language: config.LanguageSettings) -> TTSService:
+    """Build the TTS service for the given provider. Provider SDKs are imported lazily."""
+    if provider == "elevenlabs":
+        from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
+
+        logger.info(f"TTS: elevenlabs / {config.ELEVENLABS_MODEL} / {language.elevenlabs_voice}")
+        return ElevenLabsTTSService(
+            api_key=os.getenv("ELEVENLABS_API_KEY"),
+            settings=ElevenLabsTTSService.Settings(
+                model=config.ELEVENLABS_MODEL,
+                voice=language.elevenlabs_voice,
+                language=Language(language.stt_language),
+            ),
+        )
+
+    from pipecat.services.piper.tts import PiperTTSService
+
+    logger.info(f"TTS: piper / {language.piper_voice}")
+    return PiperTTSService(
+        settings=PiperTTSService.Settings(voice=language.piper_voice),
+    )
+
+
 async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
     # The React client sends {"language": "es" | "en"} in the /start body; /client sends none.
     body = runner_args.body if isinstance(runner_args.body, dict) else {}
     language = config.language_settings(body.get("language"))
-    logger.info(f"Starting bot (language: {language.code}, voice: {language.piper_voice})")
+    logger.info(f"Starting bot (language: {language.code})")
 
     stt = WhisperSTTServiceMLX(
         settings=WhisperSTTServiceMLX.Settings(
@@ -141,9 +165,7 @@ async def run_bot(transport: BaseTransport, runner_args: RunnerArguments):
 
     llm = create_llm(LLM_PROVIDER, language.system_prompt)
 
-    tts = PiperTTSService(
-        settings=PiperTTSService.Settings(voice=language.piper_voice),
-    )
+    tts = create_tts(TTS_PROVIDER, language)
 
     context = LLMContext()
     user_aggregator, assistant_aggregator = LLMContextAggregatorPair(

@@ -4,8 +4,8 @@ Minimal real-time voice assistant (Chilean Spanish or English, chosen per sessio
 
 ## Layout
 
-- `server/bot.py` — Pipecat pipeline: SmallWebRTC in → Whisper (MLX) STT → LLM → Piper TTS → out. Entry point uses Pipecat's runner, which also serves the test UI at `/client`.
-- `server/config.py` — all provider choices, per-language settings (`LANGUAGES`, `language_settings()`), and `.env` validation. Swapping providers should only touch this file and `create_llm()` in `bot.py`.
+- `server/bot.py` — Pipecat pipeline: SmallWebRTC in → Whisper (MLX) STT → LLM → Piper or ElevenLabs TTS → out. Entry point uses Pipecat's runner, which also serves the test UI at `/client`.
+- `server/config.py` — all provider choices, per-language settings (`LANGUAGES`, `language_settings()`), and `.env` validation. Swapping providers should only touch this file and `create_llm()` / `create_tts()` in `bot.py`.
 - `server/tests/` — pytest config validation tests.
 - `client/` — React + TypeScript + Tailwind v4 (Vite). `src/hooks/useVoiceSession.ts` owns all Pipecat client logic; components only render.
 - The client sends the language in the start body: `startBotAndConnect({ endpoint: '/api/start', requestData: { body: { language } } })`. The bot reads it from `runner_args.body`.

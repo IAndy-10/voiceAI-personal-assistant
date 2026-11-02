@@ -53,6 +53,13 @@ MAX_SESSION_SECS = float(os.getenv("MAX_SESSION_SECS", "1800"))
 # for better accuracy when the LLM runs in the cloud.
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo-q4")
 
+# TTS_PROVIDER: piper (default, local) | elevenlabs
+TTS_PROVIDER = os.getenv("TTS_PROVIDER", "piper").strip().lower()
+VALID_TTS_PROVIDERS = ("piper", "elevenlabs")
+ELEVENLABS_KEY = ("ELEVENLABS_API_KEY", "https://elevenlabs.io/app/settings/api-keys")
+# Flash v2.5 is ElevenLabs' lowest-latency multilingual model.
+ELEVENLABS_MODEL = os.getenv("ELEVENLABS_MODEL", "eleven_flash_v2_5")
+
 # --- Language ----------------------------------------------------------------
 # Each language selects the Whisper language, the default Piper voice, and the prompts.
 LANGUAGES = {
@@ -60,6 +67,9 @@ LANGUAGES = {
         "stt_language": "es",
         # Other Spanish voices: es_MX-ald-medium, es_AR-daniela-high, es_ES-*.
         "piper_voice": "es_MX-claude-high",
+        # Any voice ID from the ElevenLabs Voice Library; the multilingual models speak
+        # Spanish with any voice, but a native Spanish voice sounds more natural.
+        "elevenlabs_voice": "JBFqnCBsd6RMkjVDRZzb",
         "system_prompt": """\
 Eres Voice Lab, un asistente de voz amable. Hablas español chileno natural y cercano, \
 tratando al usuario de "tú". Puedes usar alguna expresión chilena de vez en cuando, \
@@ -80,6 +90,7 @@ acción externa. Si no sabes algo con certeza, dilo en vez de inventarlo.\
         "stt_language": "en",
         # Other English voices: en_US-ryan-high, en_US-amy-medium, en_GB-alan-medium.
         "piper_voice": "en_US-lessac-medium",
+        "elevenlabs_voice": "JBFqnCBsd6RMkjVDRZzb",
         "system_prompt": """\
 You are Voice Lab, a friendly voice assistant. Speak in natural, casual English.
 
@@ -104,6 +115,7 @@ if BOT_LANGUAGE not in LANGUAGES:
 
 # Overrides the voice for every language when set.
 PIPER_VOICE = os.getenv("PIPER_VOICE") or None
+ELEVENLABS_VOICE = os.getenv("ELEVENLABS_VOICE") or None
 
 
 @dataclass(frozen=True)
@@ -113,6 +125,7 @@ class LanguageSettings:
     code: str
     stt_language: str
     piper_voice: str
+    elevenlabs_voice: str
     system_prompt: str
     greeting: str
 
@@ -128,6 +141,7 @@ def language_settings(requested: str | None = None) -> LanguageSettings:
         code=code,
         stt_language=language["stt_language"],
         piper_voice=PIPER_VOICE or language["piper_voice"],
+        elevenlabs_voice=ELEVENLABS_VOICE or language["elevenlabs_voice"],
         system_prompt=language["system_prompt"],
         greeting=language["greeting"],
     )
@@ -157,3 +171,21 @@ def resolve_llm_provider() -> str:
             sys.exit(1)
 
     return LLM_PROVIDER
+
+
+def resolve_tts_provider() -> str:
+    """Return the TTS provider to use, exiting with an actionable message on bad config."""
+    if TTS_PROVIDER not in VALID_TTS_PROVIDERS:
+        logger.error(
+            f"TTS_PROVIDER={TTS_PROVIDER!r} is invalid. Use one of: {', '.join(VALID_TTS_PROVIDERS)}."
+        )
+        sys.exit(1)
+
+    if TTS_PROVIDER == "elevenlabs":
+        key_var, url = ELEVENLABS_KEY
+        if not os.getenv(key_var):
+            logger.error(f"TTS_PROVIDER=elevenlabs requires {key_var}. Create one at {url}")
+            logger.error("Add it to server/.env, or set TTS_PROVIDER=piper to run locally.")
+            sys.exit(1)
+
+    return TTS_PROVIDER
