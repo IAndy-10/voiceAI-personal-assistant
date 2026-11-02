@@ -34,7 +34,7 @@ npm run check-bundle    # fail if dist/ contains an API key
 ## Rules
 
 - Never commit `server/.env` or print its contents; it may hold API keys.
-- Before starting the bot for a test, check that the user isn't already running one: `lsof -iTCP:7860 -sTCP:LISTEN`. Never `pkill` a bot you did not start.
+- Before starting the bot for a test, check that the user isn't already running one: `lsof -iTCP:7860 -sTCP:LISTEN`. Never `pkill` a bot you did not start. The port can also be held by a Docker container from another project (`docker ps --filter publish=7860`); ask before stopping it.
 - The runner serves `POST /start` and `/sessions/{id}/api/offer` (no `/api` prefix); the Vite proxy strips `/api`. Don't add custom routes.
 - Pin npm packages exactly (`npm install --save-exact`); `@pipecat-ai/*` client versions should match the server's release line.
 - Adding or removing hooks in `useVoiceSession` breaks React Fast Refresh mid-session (blank page); reload the page.
@@ -46,6 +46,9 @@ npm run check-bundle    # fail if dist/ contains an API key
 - Use `qwen3:4b-instruct`, not `qwen3:4b`. The base model always "thinks", and disabling thinking leaks reasoning into the spoken reply.
 - Ollama ignores `developer` role messages; use `user` for injected instructions.
 - Everything the LLM writes is spoken: keep the system prompt asking for short replies with no markdown, lists, or emoji.
+- ElevenLabs: when the API rejects a request (bad voice, plan limits), Pipecat only logs "TTS context ... completed with no audio" and ends the session after three. To see the real error, call `POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}` directly with the key from `.env` (never print the key).
+- The ElevenLabs free plan can't use Voice Library voices through the API (`402 paid_plan_required`). The default voice must be a premade voice; verify any new default ID against the API. The user's key lacks `voices_read`, so voices can't be listed.
+- `.env` is only read at startup: restart the bot after changing it.
 - The dev machine is an 8 GB M1. Whisper + local LLM cause memory swapping; measure latency before and after changes.
 
 ## Commits
