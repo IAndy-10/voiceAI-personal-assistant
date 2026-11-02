@@ -8,7 +8,7 @@ By default everything runs locally:
 |---|---|
 | Speech-to-text | Whisper (MLX, on-device) |
 | LLM | Qwen 3 4B via Ollama (on-device) — or Claude, OpenAI, Gemini |
-| Text-to-speech | Piper (on-device) |
+| Text-to-speech | Piper (on-device) — or ElevenLabs |
 | Transport | SmallWebRTC (browser ↔ bot) |
 | Client | React + TypeScript + Tailwind (Vite) |
 
@@ -74,6 +74,8 @@ All settings live in `server/.env` (see `.env.example`):
 | `OLLAMA_MODEL` | `qwen3:4b-instruct` | Local model; `gemma3:1b` is ~2–3× faster and good in English, weaker on Spanish facts |
 | `WHISPER_MODEL` | `whisper-large-v3-turbo-q4` | Use `whisper-large-v3-turbo` for better accuracy when the LLM runs in the cloud |
 | `PIPER_VOICE` | per language | Defaults: `es_MX-claude-high` / `en_US-lessac-medium`; any Piper voice works |
+| `TTS_PROVIDER` | `piper` | `elevenlabs` streams cloud voices; needs `ELEVENLABS_API_KEY` |
+| `ELEVENLABS_VOICE` | per language | Voice ID from the ElevenLabs Voice Library (model: `ELEVENLABS_MODEL`, default `eleven_flash_v2_5`) |
 | `IDLE_TIMEOUT_SECS` | `300` | End the session after this long without the user speaking; `0` disables it |
 | `MAX_SESSION_SECS` | `1800` | End the session after this long in total (**untested**) |
 

@@ -10,7 +10,9 @@ def no_api_keys(monkeypatch):
     for key_var, _ in config.PROVIDER_KEYS.values():
         monkeypatch.delenv(key_var, raising=False)
     monkeypatch.setattr(config, "BOT_LANGUAGE", "es")
+    monkeypatch.delenv(config.ELEVENLABS_KEY[0], raising=False)
     monkeypatch.setattr(config, "PIPER_VOICE", None)
+    monkeypatch.setattr(config, "ELEVENLABS_VOICE", None)
 
 
 def test_invalid_provider_exits(monkeypatch):
@@ -42,6 +44,24 @@ def test_auto_picks_first_key(monkeypatch):
     assert config.resolve_llm_provider() == "openai"
 
 
+def test_invalid_tts_provider_exits(monkeypatch):
+    monkeypatch.setattr(config, "TTS_PROVIDER", "nope")
+    with pytest.raises(SystemExit):
+        config.resolve_tts_provider()
+
+
+def test_elevenlabs_without_key_exits(monkeypatch):
+    monkeypatch.setattr(config, "TTS_PROVIDER", "elevenlabs")
+    with pytest.raises(SystemExit):
+        config.resolve_tts_provider()
+
+
+def test_elevenlabs_with_key(monkeypatch):
+    monkeypatch.setattr(config, "TTS_PROVIDER", "elevenlabs")
+    monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
+    assert config.resolve_tts_provider() == "elevenlabs"
+
+
 @pytest.mark.parametrize(
     ("requested", "code", "voice"),
     [
@@ -68,3 +88,8 @@ def test_default_language_from_env(monkeypatch):
 def test_piper_voice_override(monkeypatch):
     monkeypatch.setattr(config, "PIPER_VOICE", "en_US-ryan-high")
     assert config.language_settings("es").piper_voice == "en_US-ryan-high"
+
+
+def test_elevenlabs_voice_override(monkeypatch):
+    monkeypatch.setattr(config, "ELEVENLABS_VOICE", "custom-voice-id")
+    assert config.language_settings("es").elevenlabs_voice == "custom-voice-id"

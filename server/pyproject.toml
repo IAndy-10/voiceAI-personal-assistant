@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Voice Lab: minimal Pipecat voice agent (Whisper + LLM + Piper)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "pipecat-ai[webrtc,silero,anthropic,openai,google,ollama,whisper,mlx-whisper,piper,runner]==1.14.0",
+    "pipecat-ai[webrtc,silero,anthropic,openai,google,ollama,whisper,mlx-whisper,piper,elevenlabs,runner]==1.14.0",
 ]
 
 [dependency-groups]
