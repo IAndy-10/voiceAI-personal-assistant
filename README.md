@@ -57,6 +57,8 @@ For more natural voices than Piper, use ElevenLabs as the TTS provider (cloud, b
 
 The default voice is George (`JBFqnCBsd6RMkjVDRZzb`). To change it, set `ELEVENLABS_VOICE` to a voice ID from the ElevenLabs website. On the free plan only the default voices and voices you create yourself work; Voice Library voices need a paid plan.
 
+For a more expressive bot, set `TTS_PROVIDER=elevenlabs-dialogue`. The system prompt then lets the LLM write audio tags (`[whispers]`, `[dramatically]`, `[laughs]`), which the Eleven v4/v3 models perform and the client hides from the transcript. Ask it to whisper or tell a story dramatically. It works on the free plan; first audio takes ~350 ms instead of ~250 ms with Flash. Small local models may overuse the tags.
+
 Pipecat's built-in test UI is still available at http://localhost:7860/client (it uses `BOT_LANGUAGE`).
 
 | Port | Process |
@@ -84,9 +86,10 @@ All settings live in `server/.env` (see `.env.example`):
 | `OLLAMA_MODEL` | `qwen3:4b-instruct` | Local model; `gemma3:1b` is ~2–3× faster and good in English, weaker on Spanish facts |
 | `WHISPER_MODEL` | `whisper-large-v3-turbo-q4` | Use `whisper-large-v3-turbo` for better accuracy when the LLM runs in the cloud |
 | `PIPER_VOICE` | per language | Defaults: `es_MX-claude-high` / `en_US-lessac-medium`; any Piper voice works |
-| `TTS_PROVIDER` | `piper` | `piper` (local) or `elevenlabs` (cloud, streaming) |
+| `TTS_PROVIDER` | `piper` | `piper` (local), `elevenlabs` (cloud, streaming), or `elevenlabs-dialogue` (cloud, can whisper, laugh, and sound dramatic) |
 | `ELEVENLABS_API_KEY` | — | Only needed when `TTS_PROVIDER=elevenlabs` |
 | `ELEVENLABS_MODEL` | `eleven_flash_v2_5` | ElevenLabs' lowest-latency multilingual model |
+| `ELEVENLABS_DIALOGUE_MODEL` | `eleven_v4_turbo` | Model for `elevenlabs-dialogue`: `eleven_v4_turbo` (fastest), `eleven_v3_conversational`, or `eleven_v3` (best quality, slowest) |
 | `ELEVENLABS_VOICE` | `JBFqnCBsd6RMkjVDRZzb` | Voice ID for every language; the free plan can't use Voice Library voices |
 | `IDLE_TIMEOUT_SECS` | `300` | End the session after this long without the user speaking; `0` disables it |
 | `MAX_SESSION_SECS` | `1800` | End the session after this long in total (**untested**) |

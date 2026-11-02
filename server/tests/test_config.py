@@ -13,6 +13,7 @@ def no_api_keys(monkeypatch):
     monkeypatch.delenv(config.ELEVENLABS_KEY[0], raising=False)
     monkeypatch.setattr(config, "PIPER_VOICE", None)
     monkeypatch.setattr(config, "ELEVENLABS_VOICE", None)
+    monkeypatch.setattr(config, "TTS_PROVIDER", "piper")
 
 
 def test_invalid_provider_exits(monkeypatch):
@@ -56,6 +57,12 @@ def test_elevenlabs_without_key_exits(monkeypatch):
         config.resolve_tts_provider()
 
 
+def test_elevenlabs_dialogue_without_key_exits(monkeypatch):
+    monkeypatch.setattr(config, "TTS_PROVIDER", "elevenlabs-dialogue")
+    with pytest.raises(SystemExit):
+        config.resolve_tts_provider()
+
+
 def test_elevenlabs_with_key(monkeypatch):
     monkeypatch.setattr(config, "TTS_PROVIDER", "elevenlabs")
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
@@ -93,3 +100,11 @@ def test_piper_voice_override(monkeypatch):
 def test_elevenlabs_voice_override(monkeypatch):
     monkeypatch.setattr(config, "ELEVENLABS_VOICE", "custom-voice-id")
     assert config.language_settings("es").elevenlabs_voice == "custom-voice-id"
+
+
+@pytest.mark.parametrize("code", ["es", "en"])
+def test_audio_tags_only_with_dialogue_tts(monkeypatch, code):
+    tags_prompt = config.LANGUAGES[code]["audio_tags_prompt"]
+    assert tags_prompt not in config.language_settings(code).system_prompt
+    monkeypatch.setattr(config, "TTS_PROVIDER", "elevenlabs-dialogue")
+    assert config.language_settings(code).system_prompt.endswith(tags_prompt)

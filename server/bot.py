@@ -129,6 +129,22 @@ def create_llm(provider: str, system_prompt: str) -> LLMService:
 
 def create_tts(provider: str, language: config.LanguageSettings) -> TTSService:
     """Build the TTS service for the given provider. Provider SDKs are imported lazily."""
+    if provider == "elevenlabs-dialogue":
+        from pipecat.services.elevenlabs.dialogue.tts import ElevenLabsDialogueTTSService
+
+        logger.info(
+            f"TTS: elevenlabs-dialogue / {config.ELEVENLABS_DIALOGUE_MODEL}"
+            f" / {language.elevenlabs_voice}"
+        )
+        return ElevenLabsDialogueTTSService(
+            api_key=os.getenv("ELEVENLABS_API_KEY"),
+            settings=ElevenLabsDialogueTTSService.Settings(
+                model=config.ELEVENLABS_DIALOGUE_MODEL,
+                voice=language.elevenlabs_voice,
+                language=Language(language.stt_language),
+            ),
+        )
+
     if provider == "elevenlabs":
         from pipecat.services.elevenlabs.tts import ElevenLabsTTSService
 

@@ -22,6 +22,11 @@ function joinText(a: string, b: string): string {
   return `${a} ${b}`.replace(/\s+/g, " ").trim();
 }
 
+// Audio tags like [whispers] are performed by the TTS, not shown.
+function stripAudioTags(text: string): string {
+  return text.replace(/\[[^\]]*\]/g, " ").replace(/\s+/g, " ").trim();
+}
+
 function toStatus(state: TransportState, failed: boolean): ConnectionStatus {
   switch (state) {
     case "error":
@@ -102,13 +107,16 @@ export function useVoiceSession() {
       setMessages((prev) => {
         const last = prev.at(-1);
         if (last?.role === "assistant" && last.session === current) {
-          return [...prev.slice(0, -1), { ...last, text: joinText(last.text, data.text) }];
+          return [
+            ...prev.slice(0, -1),
+            { ...last, text: stripAudioTags(joinText(last.text, data.text)) },
+          ];
         }
         const message: Message = {
           id: crypto.randomUUID(),
           role: "assistant",
           session: current,
-          text: data.text,
+          text: stripAudioTags(data.text),
           interim: "",
         };
         return [...prev, message];
