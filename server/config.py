@@ -53,12 +53,17 @@ MAX_SESSION_SECS = float(os.getenv("MAX_SESSION_SECS", "1800"))
 # for better accuracy when the LLM runs in the cloud.
 WHISPER_MODEL = os.getenv("WHISPER_MODEL", "mlx-community/whisper-large-v3-turbo-q4")
 
-# TTS_PROVIDER: piper (default, local) | elevenlabs
+# TTS_PROVIDER: piper (default, local) | elevenlabs | elevenlabs-dialogue
+# "elevenlabs-dialogue" uses the Eleven v3/v4 models, which perform audio tags such as
+# [whispers]; the system prompt then tells the LLM it may write them.
 TTS_PROVIDER = os.getenv("TTS_PROVIDER", "piper").strip().lower()
-VALID_TTS_PROVIDERS = ("piper", "elevenlabs")
+VALID_TTS_PROVIDERS = ("piper", "elevenlabs", "elevenlabs-dialogue")
+AUDIO_TAG_PROVIDERS = ("elevenlabs-dialogue",)
 ELEVENLABS_KEY = ("ELEVENLABS_API_KEY", "https://elevenlabs.io/app/settings/api-keys")
 # Flash v2.5 is ElevenLabs' lowest-latency multilingual model.
 ELEVENLABS_MODEL = os.getenv("ELEVENLABS_MODEL", "eleven_flash_v2_5")
+# eleven_v4_turbo is the fastest model with audio tags; eleven_v3 sounds best but is slower.
+ELEVENLABS_DIALOGUE_MODEL = os.getenv("ELEVENLABS_DIALOGUE_MODEL", "eleven_v4_turbo")
 
 # --- Language ----------------------------------------------------------------
 # Each language selects the Whisper language, the default Piper voice, and the prompts.
@@ -84,6 +89,13 @@ Si la transcripción del usuario está vacía o no tiene sentido, pídele amable
 lo repita. No tienes herramientas ni acceso a internet: nunca digas que realizaste una \
 acción externa. Si no sabes algo con certeza, dilo en vez de inventarlo.\
 """,
+        "audio_tags_prompt": """\
+Excepción a la regla de símbolos: puedes usar estas etiquetas de voz, escritas en inglés \
+y entre corchetes justo antes de la frase que modifican: [whispers] para susurrar, \
+[dramatically] para un tono dramático y [laughs] para reírte. Úsalas solo cuando el \
+momento lo pida, como mucho una vez por respuesta, salvo que el usuario te pida \
+susurrar o hablar de forma dramática. No uses otras etiquetas.\
+""",
         "greeting": "Saluda y preséntate en una sola oración breve.",
     },
     "en": {
@@ -102,6 +114,12 @@ Everything you write is spoken aloud, so:
 If the user's transcript is empty or makes no sense, kindly ask them to repeat it. \
 You have no tools or internet access: never claim you performed an external action. \
 If you are not sure about something, say so instead of making it up.\
+""",
+        "audio_tags_prompt": """\
+Exception to the symbol rule: you may use these voice tags, in square brackets right \
+before the sentence they change: [whispers] to whisper, [dramatically] for a dramatic \
+tone, and [laughs] to laugh. Use them only when the moment calls for it, at most once \
+per reply, unless the user asks you to whisper or be dramatic. Use no other tags.\
 """,
         "greeting": "Say hello and introduce yourself in one short sentence.",
     },
@@ -137,12 +155,15 @@ def language_settings(requested: str | None = None) -> LanguageSettings:
         logger.warning(f"Unknown language {requested!r}; using {BOT_LANGUAGE}")
         code = BOT_LANGUAGE
     language = LANGUAGES[code]
+    system_prompt = language["system_prompt"]
+    if TTS_PROVIDER in AUDIO_TAG_PROVIDERS:
+        system_prompt += "\n\n" + language["audio_tags_prompt"]
     return LanguageSettings(
         code=code,
         stt_language=language["stt_language"],
         piper_voice=PIPER_VOICE or language["piper_voice"],
         elevenlabs_voice=ELEVENLABS_VOICE or language["elevenlabs_voice"],
-        system_prompt=language["system_prompt"],
+        system_prompt=system_prompt,
         greeting=language["greeting"],
     )
 
@@ -181,10 +202,10 @@ def resolve_tts_provider() -> str:
         )
         sys.exit(1)
 
-    if TTS_PROVIDER == "elevenlabs":
+    if TTS_PROVIDER.startswith("elevenlabs"):
         key_var, url = ELEVENLABS_KEY
         if not os.getenv(key_var):
-            logger.error(f"TTS_PROVIDER=elevenlabs requires {key_var}. Create one at {url}")
+            logger.error(f"TTS_PROVIDER={TTS_PROVIDER} requires {key_var}. Create one at {url}")
             logger.error("Add it to server/.env, or set TTS_PROVIDER=piper to run locally.")
             sys.exit(1)
 

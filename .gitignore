@@ -13,3 +13,6 @@ dist/
 
 # macOS
 .DS_Store
+
+# ElevenLabs experiment results
+server/experiments/output/

@@ -48,6 +48,7 @@ npm run check-bundle    # fail if dist/ contains an API key
 - Everything the LLM writes is spoken: keep the system prompt asking for short replies with no markdown, lists, or emoji.
 - ElevenLabs: when the API rejects a request (bad voice, plan limits), Pipecat only logs "TTS context ... completed with no audio" and ends the session after three. To see the real error, call `POST https://api.elevenlabs.io/v1/text-to-speech/{voice_id}` directly with the key from `.env` (never print the key).
 - The ElevenLabs free plan can't use Voice Library voices through the API (`402 paid_plan_required`). The default voice must be a premade voice; verify any new default ID against the API. The user's key lacks `voices_read`, so voices can't be listed.
+- Audio tags (`[whispers]` etc.) need `ElevenLabsDialogueTTSService` (Eleven v3/v4 models on the text-to-dialogue endpoint); the regular TTS WebSocket rejects those models with `unsupported_model`. Tags only go in the system prompt when `TTS_PROVIDER` is in `AUDIO_TAG_PROVIDERS`, because Piper and Flash would speak them aloud. Tags reach the client transcript as text; `useVoiceSession` strips them.
 - `.env` is only read at startup: restart the bot after changing it.
 - The dev machine is an 8 GB M1. Whisper + local LLM cause memory swapping; measure latency before and after changes.
 
