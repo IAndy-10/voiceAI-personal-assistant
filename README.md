@@ -1,5 +1,7 @@
 # Voice AI Personal Assistant
 
+[![Checks](https://github.com/IAndy-10/voiceAI-personal-assistant/actions/workflows/checks.yml/badge.svg)](https://github.com/IAndy-10/voiceAI-personal-assistant/actions/workflows/checks.yml) [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE) ![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white) ![Platform](https://img.shields.io/badge/platform-macOS%20(Apple%20Silicon)-lightgrey?logo=apple)
+
 A minimal real-time voice assistant built with [Pipecat](https://github.com/pipecat-ai/pipecat). You pick Spanish (Chilean) or English in the browser, talk to it, and it answers out loud.
 
 By default everything runs locally:
@@ -74,6 +76,8 @@ cd server && uv run pytest && uv run ruff check .
 cd client && npm run build && npm run check-bundle   # build fails on type errors; check-bundle fails if an API key is in dist/
 ```
 
+The [Checks workflow](.github/workflows/checks.yml) runs the same steps on every push to `main` and every pull request.
+
 ## Configuration
 
 All settings live in `server/.env` (see `.env.example`):
@@ -113,3 +117,7 @@ All settings live in `server/.env` (see `.env.example`):
 - **Port 7860 in use** — another bot is running: `lsof -iTCP:7860 -sTCP:LISTEN`, then stop it with Ctrl+C or `kill <PID>`. If the process is `com.docker.backend`, a Docker container publishes the port: find it with `docker ps --filter publish=7860` and `docker stop` it, or run this bot with `uv run bot.py --port 7861` and point the proxy in `client/vite.config.ts` at it.
 - **`TTS context ... completed with no audio`** (ElevenLabs) — ElevenLabs rejected the request, usually because of the voice: a Voice Library voice on the free plan, or a voice ID that doesn't exist. Remove `ELEVENLABS_VOICE` to use the default voice. Pipecat doesn't log ElevenLabs' actual error message.
 - **Still hearing the Piper voice** — check that `TTS_PROVIDER=elevenlabs` isn't commented out in `server/.env`, then restart the bot. Clearing the browser cache doesn't help; the voice comes from the server.
+
+## License
+
+Released under the [MIT License](LICENSE).
